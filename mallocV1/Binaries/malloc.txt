@@ -1,0 +1,15 @@
+clear
+reset
+
+# Links 3 .ASM files into 1 .OBJ
+as malloc user lc4libc malloc
+
+# loads the linked .OBJ
+ld malloc
+
+# assemble, load OS code
+as os os
+ld os
+
+break set END
+break set OS_START
