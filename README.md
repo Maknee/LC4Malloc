@@ -9,24 +9,24 @@ mallocV1 - first version (first fit)
 
 # How to link the malloc library to your c program (using malloc_test as an example)
 
-## Setup script files
+### Setup script files
 Go to your script file (in my case, malloc_test.txt) and link the malloc file by:
 
 - Change (as malloc_test user lc4libc malloc_test) to (as malloc_test malloc user lc4libc malloc_test)
 - Add (break set OS_START) at the end
 
-## Include malloc.h
+### Include malloc.h
 In your .c file (in my case, malloc_test.c), and include malloc.h, so lcc can see the prototypes for heap functions
 (#include "malloc.h")
 
-## Call initialize_heap
+### Call initialize_heap
 In your .c file, in main() function, call intialize_heap() (Not calling this function first will cause your program to access illegal memory!!!)
 int main() {
     intialize_heap();
     ...
 }
 
-##And now, you're good to go!
+### And now, you're good to go!
 
 ======
 
