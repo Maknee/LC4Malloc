@@ -21,6 +21,8 @@
 
 // ############################ DEBUGGING #################################
 
+#ifdef _DEBUG
+
 /************************************************
  *  Printnum - 
  *  Prints out the value on the lc4
@@ -90,6 +92,8 @@ void assertLTZero(int val, char* message) {
         lc4_halt();
     }
 }
+
+#endif
 
 /***************************************************************
  *  Defines - 
@@ -315,7 +319,7 @@ chunkptr extend_heap(chunkptr previousChunk, size_t size)
     //Requested size = size + offset from the start to get to the data section 
     //+ amount of memory needed for a chunk 
     //else just offset by size + size of chunk struct
-    if(main_arena.topChunkPtr->corruptionCheckPtr == NULL)
+    if(main_arena.topChunkPtr->prevPtr == NULL)
         requestedSbrkSize = size + 2 * CHUNK_SIZE;
     else
         requestedSbrkSize = size + CHUNK_SIZE;
@@ -613,9 +617,9 @@ size_t merge_chunk(chunkptr mergeChunk)
  *  size_t - IS_VALID or IS_NOT_VALID
  *
  *  Implementation details:
- *  1) Check if malloc has been called
+ *  1) Check if the corruption ptr is same as the ptr
  *      1) Check if the ptr is pointing in somewhere in the heap
- *          1) Check if the corruption ptr is same as the ptr
+ *          1) Check if malloc has been called
  *              1) return IS_VALID
  *  2) return IS_NOT_VALID
  **************************************************************/
@@ -623,19 +627,19 @@ size_t merge_chunk(chunkptr mergeChunk)
 #define IS_VALID     1
 #define IS_NOT_VALID 0
 
-//!!!!SWITCH THE ORDER - THIS IS LESS EFFICIENT THAN CHECKING THE CORRUPTION PTR FIRST///
-
 size_t check_if_valid(void* ptr)
 {
-    //check if malloc has been called once
-    if(main_arena.topChunkPtr->corruptionCheckPtr)
+    //check if the corruption pointer is the same as the ptr
+    if(((chunkptr)ptr)->corruptionCheckPtr == (chunkptr)ptr)
     {
-        //check if ptr is within heap range
-        if((size_t)ptr >= USER_HEAP_ADDR && (size_t)ptr < (size_t)main_arena.topChunkPtr)
+        //check if malloc has been called once
+        if(main_arena.topChunkPtr->prevPtr != NULL)
         {
-            //check if the corruption pointer is the same as the ptr
-            if(((chunkptr)ptr)->corruptionCheckPtr == (chunkptr)ptr)
+            //check if ptr is within heap range
+            if((size_t)ptr >= USER_HEAP_ADDR && (size_t)ptr < (size_t)main_arena.topChunkPtr)
+            {
                 return IS_VALID;
+            }
         }
     }
     return IS_NOT_VALID;
@@ -721,6 +725,19 @@ void free(void* ptr)
     }
 }
 
+/***************************************************************
+ *  calloc - allocates n chunks with s size that are 0 initialized
+ *  Parameters: 
+ *  size_t nmemb - number of chunks to allocate
+ *  size_t size  - size of each chunk
+ *  Return Value:
+ *  void* - a pointer to the start of the first chunk
+ *
+ *  Implementation details:
+ *  1) call malloc of nmemb * size
+ *  2) zero each memory location
+ **************************************************************/
+
 void* calloc(size_t nmemb, size_t size)
 {
     void* allocatedMemory;
@@ -736,6 +753,19 @@ void* calloc(size_t nmemb, size_t size)
     return 0;
 }
 
+/***************************************************************
+ *  copy_chunk - copies the data from one chunk to another chunk
+ *  Parameters: 
+ *  chunkptr src - source chunk
+ *  chunkptr dst - destination chunk
+ *  Return Value:
+ *  none
+ *
+ *  Implementation details:
+ *  1) find the size of the destination chunk
+ *  2) copy the data in the destination chunk into the data of the src chunks
+ **************************************************************/
+
 void copy_chunk(chunkptr src, chunkptr dst)
 {
     size_t i = 0;
@@ -749,6 +779,22 @@ void copy_chunk(chunkptr src, chunkptr dst)
         i++;
     }
 }
+
+/***************************************************************
+ *  realloc - reallocates a chunk to be another size
+ *  Parameters: 
+ *  void* ptr   - the chunk to be resized
+ *  size_t size - the size the chunk should become
+ *  Return Value:
+ *  void* - pointer to the new chunk
+ *
+ *  Implementation details:
+ *  1) cet the struct chunk
+ *  2) if the ptr is null, just call malloc
+ *  3) if the ptr is valid
+ *      1) try to split the chunk if the size requested was smaller
+ *      2) else, check if next chunk is free and attempt to merge and split if possible
+ **************************************************************/
 
 void* realloc(void* ptr, size_t size)
 {
@@ -815,6 +861,5 @@ void* realloc(void* ptr, size_t size)
 
 // int main()
 // {
-
 //     return 0;
 // }
